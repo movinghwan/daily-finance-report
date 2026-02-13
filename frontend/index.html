@@ -132,9 +132,10 @@
 // ===== Supabase 직접 연결 설정 =====
   // 빌드 도구가 없으므로 정보를 직접 입력합니다. 
   // RLS가 설정되어 있어 보안상 안전합니다.
-  
-  var SUPABASE_URL = 'https://xqfvkhlfvctxokciuogd.supabase.co'; 
-  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZnZraGxmdmN0eG9rY2l1b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDc2ODQsImV4cCI6MjA4NjM4MzY4NH0.eKXB5YvFW09ic5M5afjPFgF58OoCuG0N-38YFNl7qp8'; 
+
+var SUPABASE_URL = 'https://xqfvkhlfvctxokciuogd.supabase.co'; // 캡처의 URL 주소 직접 입력
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZnZraGxmdmN0eG9rY2l1b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDc2ODQsImV4cCI6MjA4NjM4MzY4NH0.eKXB5YvFW09ic5M5afjPFgF58OoCuG0N-38YFNl7qp8'; // 캡처의 ANON_KEY 직접 입력
+
 
   var supabaseClient = null;
   var currentDate = new Date().toISOString().split('T')[0];

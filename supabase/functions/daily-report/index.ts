@@ -28,16 +28,14 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     logs.push({ ticker: "-", market: "-", status: "ok", msg: "Supabase client initialized", ts: new Date().toISOString() });
 
-    // ===== Secret Token 검증 (POST 요청 + test 모드 아닐 때) =====
-    if (req.method === "POST" && !testTicker) {
-      const secretToken = Deno.env.get("SECRET_TOKEN");
-      const requestToken = req.headers.get("x-secret-token");
-      if (!secretToken || requestToken !== secretToken) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Unauthorized" }),
-          { status: 401, headers: { ...CORS, "Content-Type": "application/json" } }
-        );
-      }
+    // ===== Secret Token 검증 (모든 요청 - test/debug 포함) =====
+    const secretToken = Deno.env.get("SECRET_TOKEN");
+    const requestToken = req.headers.get("x-secret-token");
+    if (!secretToken || requestToken !== secretToken) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...CORS, "Content-Type": "application/json" } }
+      );
     }
 
     // ===== Test mode: single stock =====

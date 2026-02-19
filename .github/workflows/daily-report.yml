@@ -1,0 +1,25 @@
+name: Daily Finance Report
+
+on:
+  schedule:
+    - cron: '0 23 * * *'  # UTC 23:00 = KST 08:00 (평일/주말 매일 실행)
+  workflow_dispatch:       # GitHub Actions 페이지에서 수동 실행 가능
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Supabase Edge Function
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            'https://xqfvkhlfvctxokciuogd.supabase.co/functions/v1/daily-report' \
+            -H 'apikey: ${{ secrets.SUPABASE_KEY }}' \
+            -H 'Authorization: Bearer ${{ secrets.SUPABASE_KEY }}' \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP Status: $response"
+          if [ "$response" -ne 200 ]; then
+            echo "❌ 수집 실패 (HTTP $response)"
+            exit 1
+          fi
+          echo "✅ 수집 성공"

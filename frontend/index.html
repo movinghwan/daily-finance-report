@@ -981,14 +981,10 @@
 
         // ===== 데이터 새로고침 =====
         async function triggerRefresh() {
-          var adminPassword = prompt(
-            "데이터를 수집하려면 관리자 비밀번호를 입력하세요:",
-          );
+          var secretToken = prompt("관리자 토큰을 입력하세요:");
 
-          if (adminPassword !== "0649") {
-            alert(
-              "비밀번호가 틀렸습니다. 관리자만 데이터를 수집할 수 있습니다.",
-            );
+          if (!secretToken) {
+            alert("토큰이 입력되지 않았습니다.");
             return;
           }
 
@@ -1001,7 +997,7 @@
           $refreshBtn.textContent = "⏳ 데이터 수집 중...";
 
           try {
-            // apikey + Authorization 헤더 명시 (Supabase Gateway 인증 필수)
+            // x-secret-token 헤더로 전송 → 서버에서 검증
             var resp = await fetch(
               SUPABASE_URL + "/functions/v1/daily-report",
               {
@@ -1010,6 +1006,7 @@
                   apikey: SUPABASE_KEY,
                   Authorization: "Bearer " + SUPABASE_KEY,
                   "Content-Type": "application/json",
+                  "x-secret-token": secretToken,
                 },
                 body: "{}",
               },

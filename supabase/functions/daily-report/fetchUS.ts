@@ -2,6 +2,7 @@
 
 import { UA } from "./constants.ts";
 import { LogEntry, StockResult } from "./types.ts";
+import { fetchYahooNews, translateToKorean } from "./news.ts";
 
 let _crumbCache: { cookie: string; crumb: string } | null = null;
 
@@ -95,6 +96,10 @@ export async function fetchUSStock(
 
     logs.push({ ticker, market: "US", status: "ok", msg: `$${price} (${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%)`, ts });
 
+    // 뉴스 크롤링 + 번역
+    const rawNews = await fetchYahooNews(ticker, crumb, cookie, logs);
+    const newsTitle = rawNews ? await translateToKorean(rawNews, ticker, logs) : `전일 대비 ${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}% ${changePct > 0 ? "상승" : changePct < 0 ? "하락" : "보합"}`;
+
     return {
       ticker,
       current_price: price,
@@ -104,7 +109,7 @@ export async function fetchUSStock(
       week52_high: meta.fiftyTwoWeekHigh ?? 0,
       week52_low: meta.fiftyTwoWeekLow ?? 0,
       volume: meta.regularMarketVolume ?? 0,
-      news_1: `전일 대비 ${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}% ${changePct > 0 ? "상승" : changePct < 0 ? "하락" : "보합"}`,
+      news_1: newsTitle,
       news_2: meta.fiftyTwoWeekHigh ? `52주 범위: $${meta.fiftyTwoWeekLow?.toFixed(2)} ~ $${meta.fiftyTwoWeekHigh?.toFixed(2)}` : null,
     };
   } catch (e) {
@@ -132,6 +137,10 @@ export async function fetchUSStock(
 
     logs.push({ ticker, market: "US", status: "ok", msg: `Fallback OK: $${p}`, ts });
 
+    // 뉴스 크롤링 + 번역 (fallback에서도 시도)
+    const rawNews2 = await fetchYahooNews(ticker, crumb, cookie, logs);
+    const newsTitle2 = rawNews2 ? await translateToKorean(rawNews2, ticker, logs) : `전일 대비 ${cp > 0 ? "+" : ""}${cp.toFixed(2)}%`;
+
     return {
       ticker,
       current_price: p,
@@ -141,7 +150,7 @@ export async function fetchUSStock(
       week52_high: m.fiftyTwoWeekHigh ?? 0,
       week52_low: m.fiftyTwoWeekLow ?? 0,
       volume: m.regularMarketVolume ?? 0,
-      news_1: `전일 대비 ${cp > 0 ? "+" : ""}${cp.toFixed(2)}%`,
+      news_1: newsTitle2,
       news_2: null,
     };
   } catch (e2) {

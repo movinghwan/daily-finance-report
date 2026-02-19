@@ -2,6 +2,7 @@
 
 import { UA } from "./constants.ts";
 import { LogEntry, StockResult } from "./types.ts";
+import { fetchNaverNews } from "./news.ts";
 
 function parseKRNum(val: any): number {
   if (typeof val === "number") return val;
@@ -42,6 +43,10 @@ export async function fetchKRStock(
 
     logs.push({ ticker: code, market: "KR", status: "ok", msg: `₩${price.toLocaleString()} (${changePct > 0 ? "+" : ""}${changePct}%)`, ts });
 
+    // Naver 뉴스 크롤링 (한글이므로 번역 불필요)
+    const newsTitle = await fetchNaverNews(code, logs) ??
+      `전일 대비 ${changePct > 0 ? "+" : ""}${changePct}% ${changePct > 0 ? "상승" : changePct < 0 ? "하락" : "보합"}`;
+
     return {
       ticker: code,
       current_price: price,
@@ -51,7 +56,7 @@ export async function fetchKRStock(
       week52_high: h52,
       week52_low: l52,
       volume: 0,
-      news_1: `전일 대비 ${changePct > 0 ? "+" : ""}${changePct}% ${changePct > 0 ? "상승" : changePct < 0 ? "하락" : "보합"}`,
+      news_1: newsTitle,
       news_2: h52 ? `52주 범위: ₩${l52.toLocaleString()} ~ ₩${h52.toLocaleString()}` : null,
     };
   } catch (e) {
@@ -76,6 +81,10 @@ export async function fetchKRStock(
 
     logs.push({ ticker: code, market: "KR", status: "ok", msg: `Polling: ₩${price.toLocaleString()}`, ts });
 
+    // Naver 뉴스 크롤링 (polling fallback에서도 시도)
+    const newsTitle2 = await fetchNaverNews(code, logs) ??
+      `전일 대비 ${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%`;
+
     return {
       ticker: code,
       current_price: price,
@@ -85,7 +94,7 @@ export async function fetchKRStock(
       week52_high: 0,
       week52_low: 0,
       volume: 0,
-      news_1: `전일 대비 ${changePct > 0 ? "+" : ""}${changePct.toFixed(2)}%`,
+      news_1: newsTitle2,
       news_2: null,
     };
   } catch (e2) {

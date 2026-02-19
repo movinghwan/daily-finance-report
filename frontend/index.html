@@ -936,12 +936,12 @@
                 .from("daily_summary")
                 .select("*")
                 .eq("report_date", date)
-                .single(),
+                .maybeSingle(),
               supabaseClient.from("portfolio_stocks").select("*"),
             ]);
 
             var snapshots = results[0].data || [];
-            var summary = results[1].data;
+            var summary = results[1].data || null;
             var stocks = results[2].data || [];
 
             if (snapshots.length === 0) {

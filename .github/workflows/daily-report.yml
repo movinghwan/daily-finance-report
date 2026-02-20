@@ -2,24 +2,67 @@ name: Daily Finance Report
 
 on:
   schedule:
-    - cron: '0 23 * * *'  # UTC 23:00 = KST 08:00 (평일/주말 매일 실행)
-  workflow_dispatch:       # GitHub Actions 페이지에서 수동 실행 가능
+    - cron: '0 23 * * *'  # UTC 23:00 = KST 08:00
+  workflow_dispatch:       # 수동 실행
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 10    # 최대 10분 내 완료 안 되면 강제 종료
+
     steps:
-      - name: Trigger Supabase Edge Function
+      # ── 1. Secret 등록 여부 사전 확인 ──────────────────────────────
+      - name: Validate secrets
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          if [ -z "${{ secrets.SUPABASE_KEY }}" ]; then
+            echo "❌ SUPABASE_KEY secret이 등록되지 않았습니다."
+            echo "   GitHub → Settings → Secrets → SUPABASE_KEY 를 등록하세요."
+            exit 1
+          fi
+          echo "✅ Secret 확인 완료"
+
+      # ── 2. Edge Function 호출 ────────────────────────────────────────
+      - name: Trigger Supabase Edge Function
+        id: trigger
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            --max-time 300 \
+            -X POST \
             'https://xqfvkhlfvctxokciuogd.supabase.co/functions/v1/daily-report' \
-            -H 'apikey: ${{ secrets.SUPABASE_KEY }}' \
             -H 'Authorization: Bearer ${{ secrets.SUPABASE_KEY }}' \
             -H 'Content-Type: application/json' \
             -d '{}')
-          echo "HTTP Status: $response"
-          if [ "$response" -ne 200 ]; then
-            echo "❌ 수집 실패 (HTTP $response)"
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | head -n -1)
+
+          echo "HTTP Status : $http_code"
+          echo "Response    : $body"
+
+          # GitHub Actions Summary에 결과 기록
+          echo "## 📊 Daily Finance Report 수집 결과" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 시각 (UTC)**: $(date -u '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **HTTP 상태**: $http_code" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$http_code" -eq 200 ]; then
+            fetched=$(echo "$body" | grep -o '"fetched":[0-9]*' | grep -o '[0-9]*')
+            failed=$(echo "$body"  | grep -o '"failed":[0-9]*'  | grep -o '[0-9]*')
+            signal=$(echo "$body"  | grep -o '"signal":"[^"]*"' | cut -d'"' -f4)
+            echo "- **수집 성공**: ${fetched:-?}종목" >> $GITHUB_STEP_SUMMARY
+            echo "- **수집 실패**: ${failed:-?}종목"  >> $GITHUB_STEP_SUMMARY
+            echo "- **시장 시그널**: ${signal:-?}"     >> $GITHUB_STEP_SUMMARY
+            echo "✅ 수집 성공 (${fetched:-?}종목)"
+          else
+            echo "- **오류 내용**: \`$body\`" >> $GITHUB_STEP_SUMMARY
+            echo "❌ 수집 실패 (HTTP $http_code)"
+            echo "Response body: $body"
             exit 1
           fi
-          echo "✅ 수집 성공"
+
+      # ── 3. 실패 시 Slack 알림 (선택 — SLACK_WEBHOOK_URL secret 필요) ──
+      # - name: Notify failure on Slack
+      #   if: failure()
+      #   run: |
+      #     curl -s -X POST '${{ secrets.SLACK_WEBHOOK_URL }}' \
+      #       -H 'Content-Type: application/json' \
+      #       -d '{"text":"❌ Daily Finance Report 수집 실패! GitHub Actions 로그를 확인하세요."}'
